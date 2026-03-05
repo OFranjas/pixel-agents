@@ -149,10 +149,11 @@ export class CodexAppServerRuntime implements RuntimeProvider {
 
 	async restoreAgent(agentId: number, threadId: string, cwd?: string, folderName?: string): Promise<void> {
 		await this.ensureReady();
-		await this.client.threadResume({
-			threadId,
-			cwd: cwd || null,
-		});
+		const params: { threadId: string; cwd?: string | null } = { threadId };
+		if (cwd) {
+			params.cwd = cwd;
+		}
+		await this.client.threadResume(params);
 		this.registerAgent(agentId, threadId, folderName);
 		this.options.onEvent({ type: 'agentCreated', id: agentId, folderName });
 	}

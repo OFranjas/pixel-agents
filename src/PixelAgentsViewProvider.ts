@@ -255,9 +255,22 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
 			this.claudeRuntime.restore();
 		}
 
+		let codexReady = false;
 		if (this.runtimeMode === 'codex' || this.runtimeMode === 'mixed') {
-			await this.ensureCodexRuntimeInitialized();
-			await this.restoreCodexAgents();
+			try {
+				await this.ensureCodexRuntimeInitialized();
+				await this.restoreCodexAgents();
+				codexReady = true;
+			} catch (error) {
+				const detail = error instanceof Error ? error.message : String(error);
+				this.codexOutput.appendLine(`[codex] startup failed: ${detail}`);
+				this.codexRuntime = null;
+				if (this.runtimeMode === 'codex') {
+					vscode.window.showErrorMessage(`Pixel Agents: Codex startup failed. ${detail}`);
+				} else {
+					vscode.window.showWarningMessage(`Pixel Agents: Codex startup failed in mixed mode. ${detail}`);
+				}
+			}
 		}
 
 		this.loadAssetsAndLayout();
@@ -265,7 +278,9 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
 		if (this.runtimeMode === 'claude' || this.runtimeMode === 'mixed') {
 			this.claudeRuntime.sendExistingAgents();
 		}
-		this.sendExistingCodexAgents();
+		if (codexReady) {
+			this.sendExistingCodexAgents();
+		}
 	}
 
 	private async ensureCodexRuntimeInitialized(): Promise<void> {
@@ -395,7 +410,6 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
 
 	private async restoreCodexAgents(): Promise<void> {
 		if (!this.codexRuntime) return;
-		const cwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
 		const codexAgents = this.persistedAgentsV2.filter((entry) => entry.runtime === 'codex' && entry.codex?.threadId);
 		for (const entry of codexAgents) {
 			this.nextAgentId.current = Math.max(this.nextAgentId.current, entry.id + 1);
@@ -403,7 +417,7 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
 				await this.codexRuntime.restoreAgent(
 					entry.id,
 					entry.codex!.threadId,
-					cwd,
+					undefined,
 					entry.folderName,
 				);
 			} catch (error) {
