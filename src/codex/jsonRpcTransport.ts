@@ -76,12 +76,13 @@ export class CodexJsonRpcTransport {
 			stdio: ['pipe', 'pipe', 'pipe'],
 			windowsHide: true,
 		});
+		const child = this.process;
 
-		this.process.stdout.on('data', (chunk: Buffer | string) => {
+		child.stdout.on('data', (chunk: Buffer | string) => {
 			this.handleStdoutChunk(chunk.toString('utf-8'));
 		});
 
-		this.process.stderr.on('data', (chunk: Buffer | string) => {
+		child.stderr.on('data', (chunk: Buffer | string) => {
 			const lines = chunk.toString('utf-8').split('\n');
 			for (const line of lines) {
 				const trimmed = line.trim();
@@ -91,11 +92,14 @@ export class CodexJsonRpcTransport {
 			}
 		});
 
-		this.process.on('error', (error) => {
+		child.on('error', (error) => {
 			this.emitter.emit('error', error);
 		});
 
-		this.process.on('exit', (code, signal) => {
+		child.on('exit', (code, signal) => {
+			if (this.process !== child) {
+				return;
+			}
 			this.process = null;
 			this.emitter.emit('exit', code, signal);
 			if (this.options.autoRestart && !this.restarting && !this.stopped) {

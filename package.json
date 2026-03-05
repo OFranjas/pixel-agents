@@ -90,7 +90,7 @@
     "check-types": "tsc --noEmit",
     "lint": "eslint src",
     "import-tileset": "tsx scripts/import-tileset-cli.ts",
-    "test": "node --test --import tsx src/codex/*.test.ts"
+    "test": "node --test --import tsx src/codex/*.test.ts src/runtime/*.test.ts"
   },
   "devDependencies": {
     "@anthropic-ai/sdk": "^0.74.0",

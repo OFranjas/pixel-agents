@@ -9,8 +9,8 @@ import {
 } from '../constants.js';
 import type { PersistedAgent } from '../types.js';
 import type { PersistedRuntimeAgentV2, RuntimeKind } from './types.js';
-
-export type RuntimeMode = 'claude' | 'codex' | 'mixed';
+import { normalizeRuntimeMode, type RuntimeMode } from './modeRouting.js';
+export type { RuntimeMode } from './modeRouting.js';
 
 export interface RuntimeSettings {
 	mode: RuntimeMode;
@@ -22,8 +22,7 @@ export interface RuntimeSettings {
 export function readRuntimeSettings(): RuntimeSettings {
 	const cfg = vscode.workspace.getConfiguration();
 	const modeValue = cfg.get<string>(CONFIG_RUNTIME, 'claude');
-	const mode: RuntimeMode =
-		modeValue === 'codex' || modeValue === 'mixed' ? modeValue : 'claude';
+	const mode = normalizeRuntimeMode(modeValue);
 	return {
 		mode,
 		codexCommand: cfg.get<string>(CONFIG_CODEX_COMMAND, 'codex app-server'),
