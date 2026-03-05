@@ -22,13 +22,13 @@ For M1-M8, scripts are planned gates and may depend on commands/tests introduced
 - `M0-CODEX-01` (`codex`)
   1. Set `pixelAgents.runtime=codex` and reload window.
   2. Confirm toolbar labels `+ Agent (Codex)`.
-  3. Open integration docs from README links.
+  3. Open integration docs directly from `docs/codex-integration/`.
   Pass: runtime mode labeling + docs discoverability are correct.
 
 - `M0-MIXED-01` (`mixed`)
   1. Set `pixelAgents.runtime=mixed` and reload window.
   2. Confirm both `+ Agent` and `+ Codex` buttons appear.
-  3. Open docs links from README.
+  3. Open integration docs directly from `docs/codex-integration/`.
   Pass: mixed-mode affordances visible; docs linked.
 
 ## M1
