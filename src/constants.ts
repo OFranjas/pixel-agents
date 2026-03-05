@@ -37,6 +37,13 @@ export const VIEW_ID = 'pixel-agents.panelView';
 export const COMMAND_SHOW_PANEL = 'pixel-agents.showPanel';
 export const COMMAND_EXPORT_DEFAULT_LAYOUT = 'pixel-agents.exportDefaultLayout';
 export const WORKSPACE_KEY_AGENTS = 'pixel-agents.agents';
+export const WORKSPACE_KEY_AGENTS_V2 = 'pixel-agents.agents.v2';
 export const WORKSPACE_KEY_AGENT_SEATS = 'pixel-agents.agentSeats';
 export const WORKSPACE_KEY_LAYOUT = 'pixel-agents.layout';
 export const TERMINAL_NAME_PREFIX = 'Claude Code';
+
+// ── Runtime Settings ────────────────────────────────────────
+export const CONFIG_RUNTIME = 'pixelAgents.runtime';
+export const CONFIG_CODEX_COMMAND = 'pixelAgents.codex.command';
+export const CONFIG_CODEX_EXPERIMENTAL_API = 'pixelAgents.codex.experimentalApi';
+export const CONFIG_CODEX_AUTO_RESTART = 'pixelAgents.codex.autoRestart';

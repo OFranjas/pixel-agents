@@ -46,6 +46,36 @@
           "name": "Pixel Agents"
         }
       ]
+    },
+    "configuration": {
+      "title": "Pixel Agents",
+      "properties": {
+        "pixelAgents.runtime": {
+          "type": "string",
+          "enum": [
+            "claude",
+            "codex",
+            "mixed"
+          ],
+          "default": "claude",
+          "markdownDescription": "Choose which runtime launches from **+ Agent**. `mixed` enables both Claude and Codex agent creation."
+        },
+        "pixelAgents.codex.command": {
+          "type": "string",
+          "default": "codex app-server",
+          "markdownDescription": "Command used to launch Codex app-server over stdio."
+        },
+        "pixelAgents.codex.experimentalApi": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Opt into Codex experimental app-server fields and methods."
+        },
+        "pixelAgents.codex.autoRestart": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Automatically restart Codex app-server after unexpected exit."
+        }
+      }
     }
   },
   "scripts": {
@@ -59,7 +89,8 @@
     "package": "npm run check-types && npm run lint && node esbuild.js --production && npm run build:webview",
     "check-types": "tsc --noEmit",
     "lint": "eslint src",
-    "import-tileset": "tsx scripts/import-tileset-cli.ts"
+    "import-tileset": "tsx scripts/import-tileset-cli.ts",
+    "test": "node --test --import tsx src/codex/*.test.ts"
   },
   "devDependencies": {
     "@anthropic-ai/sdk": "^0.74.0",
