@@ -9,6 +9,7 @@ interface ToolOverlayProps {
   officeState: OfficeState
   agents: number[]
   agentTools: Record<number, ToolActivity[]>
+  agentMessages: Record<number, { itemId: string; text: string }>
   subagentCharacters: SubagentCharacter[]
   containerRef: React.RefObject<HTMLDivElement | null>
   zoom: number
@@ -44,6 +45,7 @@ export function ToolOverlay({
   officeState,
   agents,
   agentTools,
+  agentMessages,
   subagentCharacters,
   containerRef,
   zoom,
@@ -108,7 +110,8 @@ export function ToolOverlay({
             activityText = sub ? sub.label : 'Subtask'
           }
         } else {
-          activityText = getActivityText(id, agentTools, ch.isActive)
+          const msg = agentMessages[id]?.text
+          activityText = msg && msg.trim() ? msg : getActivityText(id, agentTools, ch.isActive)
         }
 
         // Determine dot color

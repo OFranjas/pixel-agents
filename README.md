@@ -28,6 +28,7 @@ This is the source code for the free [Pixel Agents extension for VS Code](https:
 
 - VS Code 1.109.0 or later
 - [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) installed and configured
+- [Codex CLI](https://github.com/openai/codex) installed and authenticated (required for `codex` or `mixed` runtime modes)
 
 ## Getting Started
 
@@ -84,6 +85,21 @@ The extension will still work without the tileset — you'll get the default cha
 Pixel Agents watches Claude Code's JSONL transcript files to track what each agent is doing. When an agent uses a tool (like writing a file or running a command), the extension detects it and updates the character's animation accordingly. No modifications to Claude Code are needed — it's purely observational.
 
 The webview runs a lightweight game loop with canvas rendering, BFS pathfinding, and a character state machine (idle → walk → type/read). Everything is pixel-perfect at integer zoom levels.
+
+## Codex App-Server Integration
+
+Pixel Agents now supports three runtime modes via `pixelAgents.runtime`:
+
+- `claude` (default) - Uses the existing Claude JSONL runtime.
+- `codex` - Routes agent creation and prompts through `codex app-server`.
+- `mixed` - Enables both paths (`+ Agent` for Claude and `+ Codex` for Codex).
+
+Integration planning and implementation docs:
+
+- [Architecture](docs/codex-integration/ARCHITECTURE.md)
+- [Milestones (M0-M8)](docs/codex-integration/MILESTONES.md)
+- [Acceptance Scripts](docs/codex-integration/ACCEPTANCE_SCRIPTS.md)
+- [Ownership and Merge Order](docs/codex-integration/OWNERSHIP.md)
 
 ## Tech Stack
 

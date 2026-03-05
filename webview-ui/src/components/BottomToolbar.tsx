@@ -6,10 +6,14 @@ import { vscode } from '../vscodeApi.js'
 interface BottomToolbarProps {
   isEditMode: boolean
   onOpenClaude: () => void
+  onOpenCodex: (folderPath?: string) => void
   onToggleEditMode: () => void
   isDebugMode: boolean
   onToggleDebugMode: () => void
   workspaceFolders: WorkspaceFolder[]
+  runtimeMode: 'claude' | 'codex' | 'mixed'
+  selectedAgent: number | null
+  onSendPrompt: (text: string) => void
 }
 
 const panelStyle: React.CSSProperties = {
@@ -47,15 +51,21 @@ const btnActive: React.CSSProperties = {
 export function BottomToolbar({
   isEditMode,
   onOpenClaude,
+  onOpenCodex,
   onToggleEditMode,
   isDebugMode,
   onToggleDebugMode,
   workspaceFolders,
+  runtimeMode,
+  selectedAgent,
+  onSendPrompt,
 }: BottomToolbarProps) {
   const [hovered, setHovered] = useState<string | null>(null)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isFolderPickerOpen, setIsFolderPickerOpen] = useState(false)
+  const [folderPickerMode, setFolderPickerMode] = useState<'claude' | 'codex'>('claude')
   const [hoveredFolder, setHoveredFolder] = useState<number | null>(null)
+  const [prompt, setPrompt] = useState('')
   const folderPickerRef = useRef<HTMLDivElement>(null)
 
   // Close folder picker on outside click
@@ -74,6 +84,7 @@ export function BottomToolbar({
 
   const handleAgentClick = () => {
     if (hasMultipleFolders) {
+      setFolderPickerMode(runtimeMode === 'codex' ? 'codex' : 'claude')
       setIsFolderPickerOpen((v) => !v)
     } else {
       onOpenClaude()
@@ -82,7 +93,27 @@ export function BottomToolbar({
 
   const handleFolderSelect = (folder: WorkspaceFolder) => {
     setIsFolderPickerOpen(false)
+    if (folderPickerMode === 'codex') {
+      onOpenCodex(folder.path)
+      return
+    }
     vscode.postMessage({ type: 'openClaude', folderPath: folder.path })
+  }
+
+  const handleCodexClick = () => {
+    if (hasMultipleFolders) {
+      setFolderPickerMode('codex')
+      setIsFolderPickerOpen((v) => !v)
+      return
+    }
+    onOpenCodex()
+  }
+
+  const sendPrompt = () => {
+    const text = prompt.trim()
+    if (!text || selectedAgent === null) return
+    onSendPrompt(text)
+    setPrompt('')
   }
 
   return (
@@ -103,7 +134,7 @@ export function BottomToolbar({
             color: 'var(--pixel-agent-text)',
           }}
         >
-          + Agent
+          {runtimeMode === 'codex' ? '+ Agent (Codex)' : '+ Agent'}
         </button>
         {isFolderPickerOpen && (
           <div
@@ -146,6 +177,26 @@ export function BottomToolbar({
           </div>
         )}
       </div>
+      {runtimeMode === 'mixed' && (
+        <button
+          onClick={handleCodexClick}
+          onMouseEnter={() => setHovered('codex')}
+          onMouseLeave={() => setHovered(null)}
+          style={{
+            ...btnBase,
+            padding: '5px 12px',
+            background:
+              hovered === 'codex'
+                ? 'var(--pixel-agent-hover-bg)'
+                : 'var(--pixel-agent-bg)',
+            border: '2px solid var(--pixel-agent-border)',
+            color: 'var(--pixel-agent-text)',
+          }}
+          title="Open Codex agent"
+        >
+          + Codex
+        </button>
+      )}
       <button
         onClick={onToggleEditMode}
         onMouseEnter={() => setHovered('edit')}
@@ -185,6 +236,50 @@ export function BottomToolbar({
           isDebugMode={isDebugMode}
           onToggleDebugMode={onToggleDebugMode}
         />
+      </div>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 4,
+          marginLeft: 4,
+          minWidth: 300,
+        }}
+      >
+        <input
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              sendPrompt()
+            }
+          }}
+          placeholder={selectedAgent === null ? 'Select an agent to send a prompt' : 'Send to selected agent'}
+          disabled={selectedAgent === null}
+          style={{
+            flex: 1,
+            minWidth: 220,
+            padding: '5px 8px',
+            fontSize: '20px',
+            color: 'var(--pixel-text)',
+            background: 'var(--pixel-btn-bg)',
+            border: '2px solid var(--pixel-border)',
+            borderRadius: 0,
+            opacity: selectedAgent === null ? 0.6 : 1,
+          }}
+        />
+        <button
+          onClick={sendPrompt}
+          disabled={selectedAgent === null || prompt.trim().length === 0}
+          style={
+            selectedAgent === null || prompt.trim().length === 0
+              ? { ...btnBase, opacity: 0.6, cursor: 'default' }
+              : btnBase
+          }
+          title="Send prompt"
+        >
+          Send
+        </button>
       </div>
     </div>
   )

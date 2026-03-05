@@ -7,6 +7,8 @@ interface DebugViewProps {
   agentTools: Record<number, ToolActivity[]>
   agentStatuses: Record<number, string>
   subagentTools: Record<number, Record<string, ToolActivity[]>>
+  commandOutputs: Record<number, Record<string, string>>
+  fileChangeOutputs: Record<number, Record<string, string>>
   onSelectAgent: (id: number) => void
 }
 
@@ -56,6 +58,8 @@ export function DebugView({
   agentTools,
   agentStatuses,
   subagentTools,
+  commandOutputs,
+  fileChangeOutputs,
   onSelectAgent,
 }: DebugViewProps) {
   const renderAgentCard = (id: number) => {
@@ -63,6 +67,8 @@ export function DebugView({
     const tools = agentTools[id] || []
     const subs = subagentTools[id] || {}
     const status = agentStatuses[id]
+    const outputs = commandOutputs[id] || {}
+    const fileOutputs = fileChangeOutputs[id] || {}
     const hasActiveTools = tools.some((t) => !t.done)
     return (
       <div
@@ -108,6 +114,20 @@ export function DebugView({
             {tools.map((tool) => (
               <div key={tool.toolId}>
                 <ToolLine tool={tool} />
+                {(outputs[tool.toolId] || fileOutputs[tool.toolId]) && (
+                  <pre
+                    style={{
+                      margin: '2px 0 2px 16px',
+                      fontSize: '14px',
+                      opacity: 0.85,
+                      whiteSpace: 'pre-wrap',
+                      borderLeft: '2px solid var(--vscode-widget-border, rgba(255,255,255,0.12))',
+                      paddingLeft: 8,
+                    }}
+                  >
+                    {(outputs[tool.toolId] || fileOutputs[tool.toolId]).slice(-1000)}
+                  </pre>
+                )}
                 {subs[tool.toolId] && subs[tool.toolId].length > 0 && (
                   <div
                     style={{

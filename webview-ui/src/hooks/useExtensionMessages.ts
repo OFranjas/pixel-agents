@@ -45,11 +45,17 @@ export interface ExtensionMessageState {
   selectedAgent: number | null
   agentTools: Record<number, ToolActivity[]>
   agentStatuses: Record<number, string>
+  agentMessages: Record<number, { itemId: string; text: string }>
+  commandOutputs: Record<number, Record<string, string>>
+  fileChangeOutputs: Record<number, Record<string, string>>
+  agentDiffs: Record<number, { turnId: string; diff: string }>
+  pendingApprovals: Record<number, Array<{ requestId: string | number; method: string; payload: Record<string, unknown>; availableDecisions?: unknown[] }>>
   subagentTools: Record<number, Record<string, ToolActivity[]>>
   subagentCharacters: SubagentCharacter[]
   layoutReady: boolean
   loadedAssets?: { catalog: FurnitureAsset[]; sprites: Record<string, string[][]> }
   workspaceFolders: WorkspaceFolder[]
+  runtimeMode: 'claude' | 'codex' | 'mixed'
 }
 
 function saveAgentSeats(os: OfficeState): void {
@@ -70,11 +76,17 @@ export function useExtensionMessages(
   const [selectedAgent, setSelectedAgent] = useState<number | null>(null)
   const [agentTools, setAgentTools] = useState<Record<number, ToolActivity[]>>({})
   const [agentStatuses, setAgentStatuses] = useState<Record<number, string>>({})
+  const [agentMessages, setAgentMessages] = useState<Record<number, { itemId: string; text: string }>>({})
+  const [commandOutputs, setCommandOutputs] = useState<Record<number, Record<string, string>>>({})
+  const [fileChangeOutputs, setFileChangeOutputs] = useState<Record<number, Record<string, string>>>({})
+  const [agentDiffs, setAgentDiffs] = useState<Record<number, { turnId: string; diff: string }>>({})
+  const [pendingApprovals, setPendingApprovals] = useState<Record<number, Array<{ requestId: string | number; method: string; payload: Record<string, unknown>; availableDecisions?: unknown[] }>>>({})
   const [subagentTools, setSubagentTools] = useState<Record<number, Record<string, ToolActivity[]>>>({})
   const [subagentCharacters, setSubagentCharacters] = useState<SubagentCharacter[]>([])
   const [layoutReady, setLayoutReady] = useState(false)
   const [loadedAssets, setLoadedAssets] = useState<{ catalog: FurnitureAsset[]; sprites: Record<string, string[][]> } | undefined>()
   const [workspaceFolders, setWorkspaceFolders] = useState<WorkspaceFolder[]>([])
+  const [runtimeMode, setRuntimeMode] = useState<'claude' | 'codex' | 'mixed'>('claude')
 
   // Track whether initial layout has been loaded (ref to avoid re-render)
   const layoutReadyRef = useRef(false)
@@ -130,6 +142,36 @@ export function useExtensionMessages(
           return next
         })
         setAgentStatuses((prev) => {
+          if (!(id in prev)) return prev
+          const next = { ...prev }
+          delete next[id]
+          return next
+        })
+        setAgentMessages((prev) => {
+          if (!(id in prev)) return prev
+          const next = { ...prev }
+          delete next[id]
+          return next
+        })
+        setCommandOutputs((prev) => {
+          if (!(id in prev)) return prev
+          const next = { ...prev }
+          delete next[id]
+          return next
+        })
+        setFileChangeOutputs((prev) => {
+          if (!(id in prev)) return prev
+          const next = { ...prev }
+          delete next[id]
+          return next
+        })
+        setAgentDiffs((prev) => {
+          if (!(id in prev)) return prev
+          const next = { ...prev }
+          delete next[id]
+          return next
+        })
+        setPendingApprovals((prev) => {
           if (!(id in prev)) return prev
           const next = { ...prev }
           delete next[id]
@@ -216,6 +258,77 @@ export function useExtensionMessages(
         setSubagentCharacters((prev) => prev.filter((s) => s.parentAgentId !== id))
         os.setAgentTool(id, null)
         os.clearPermissionBubble(id)
+      } else if (msg.type === 'agentMessageStart') {
+        const id = msg.id as number
+        const itemId = msg.itemId as string
+        setAgentMessages((prev) => ({ ...prev, [id]: { itemId, text: '' } }))
+      } else if (msg.type === 'agentMessageDelta') {
+        const id = msg.id as number
+        const itemId = msg.itemId as string
+        const delta = msg.delta as string
+        setAgentMessages((prev) => {
+          const current = prev[id]
+          if (!current || current.itemId !== itemId) {
+            return { ...prev, [id]: { itemId, text: delta } }
+          }
+          return { ...prev, [id]: { itemId, text: current.text + delta } }
+        })
+      } else if (msg.type === 'agentMessageDone') {
+        const id = msg.id as number
+        const itemId = msg.itemId as string
+        setAgentMessages((prev) => {
+          const current = prev[id]
+          if (!current || current.itemId !== itemId) return prev
+          return prev
+        })
+      } else if (msg.type === 'agentCommandOutputDelta') {
+        const id = msg.id as number
+        const itemId = msg.itemId as string
+        const delta = msg.delta as string
+        setCommandOutputs((prev) => {
+          const byAgent = prev[id] || {}
+          const current = byAgent[itemId] || ''
+          return { ...prev, [id]: { ...byAgent, [itemId]: current + delta } }
+        })
+      } else if (msg.type === 'agentFileChangeOutputDelta') {
+        const id = msg.id as number
+        const itemId = msg.itemId as string
+        const delta = msg.delta as string
+        setFileChangeOutputs((prev) => {
+          const byAgent = prev[id] || {}
+          const current = byAgent[itemId] || ''
+          return { ...prev, [id]: { ...byAgent, [itemId]: current + delta } }
+        })
+      } else if (msg.type === 'agentDiffUpdated') {
+        const id = msg.id as number
+        const turnId = msg.turnId as string
+        const diff = msg.diff as string
+        setAgentDiffs((prev) => ({ ...prev, [id]: { turnId, diff } }))
+      } else if (msg.type === 'agentApprovalRequested') {
+        const id = msg.id as number
+        const requestId = msg.requestId as string | number
+        const method = msg.method as string
+        const payload = (msg.payload || {}) as Record<string, unknown>
+        const availableDecisions = Array.isArray(msg.availableDecisions) ? (msg.availableDecisions as unknown[]) : undefined
+        setPendingApprovals((prev) => {
+          const list = prev[id] || []
+          if (list.some((req) => req.requestId === requestId)) return prev
+          return { ...prev, [id]: [...list, { requestId, method, payload, availableDecisions }] }
+        })
+      } else if (msg.type === 'agentApprovalResolved') {
+        const id = msg.id as number
+        const requestId = msg.requestId as string | number
+        setPendingApprovals((prev) => {
+          const list = prev[id]
+          if (!list) return prev
+          const nextList = list.filter((req) => req.requestId !== requestId)
+          if (nextList.length === 0) {
+            const next = { ...prev }
+            delete next[id]
+            return next
+          }
+          return { ...prev, [id]: nextList }
+        })
       } else if (msg.type === 'agentSelected') {
         const id = msg.id as number
         setSelectedAgent(id)
@@ -342,6 +455,10 @@ export function useExtensionMessages(
       } else if (msg.type === 'settingsLoaded') {
         const soundOn = msg.soundEnabled as boolean
         setSoundEnabled(soundOn)
+        const mode = msg.runtimeMode as 'claude' | 'codex' | 'mixed' | undefined
+        if (mode === 'claude' || mode === 'codex' || mode === 'mixed') {
+          setRuntimeMode(mode)
+        }
       } else if (msg.type === 'furnitureAssetsLoaded') {
         try {
           const catalog = msg.catalog as FurnitureAsset[]
@@ -360,5 +477,21 @@ export function useExtensionMessages(
     return () => window.removeEventListener('message', handler)
   }, [getOfficeState])
 
-  return { agents, selectedAgent, agentTools, agentStatuses, subagentTools, subagentCharacters, layoutReady, loadedAssets, workspaceFolders }
+  return {
+    agents,
+    selectedAgent,
+    agentTools,
+    agentStatuses,
+    agentMessages,
+    commandOutputs,
+    fileChangeOutputs,
+    agentDiffs,
+    pendingApprovals,
+    subagentTools,
+    subagentCharacters,
+    layoutReady,
+    loadedAssets,
+    workspaceFolders,
+    runtimeMode,
+  }
 }

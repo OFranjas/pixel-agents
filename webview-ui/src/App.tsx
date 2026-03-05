@@ -42,6 +42,24 @@ const actionBarBtnDisabled: React.CSSProperties = {
   cursor: 'default',
 }
 
+function defaultApprovalDecisions(method: string): unknown[] {
+  if (method === 'item/commandExecution/requestApproval' || method === 'item/fileChange/requestApproval') {
+    return ['accept', 'acceptForSession', 'decline', 'cancel']
+  }
+  return ['accept', 'decline']
+}
+
+function approvalDecisionLabel(decision: unknown): string {
+  if (typeof decision === 'string') return decision
+  if (decision && typeof decision === 'object') {
+    const keys = Object.keys(decision as Record<string, unknown>)
+    if (keys.length > 0) {
+      return keys[0]
+    }
+  }
+  return 'decision'
+}
+
 function EditActionBar({ editor, editorState: es }: { editor: ReturnType<typeof useEditorActions>; editorState: EditorState }) {
   const [showResetConfirm, setShowResetConfirm] = useState(false)
 
@@ -121,7 +139,23 @@ function App() {
 
   const isEditDirty = useCallback(() => editor.isEditMode && editor.isDirty, [editor.isEditMode, editor.isDirty])
 
-  const { agents, selectedAgent, agentTools, agentStatuses, subagentTools, subagentCharacters, layoutReady, loadedAssets, workspaceFolders } = useExtensionMessages(getOfficeState, editor.setLastSavedLayout, isEditDirty)
+  const {
+    agents,
+    selectedAgent,
+    agentTools,
+    agentStatuses,
+    agentMessages,
+    commandOutputs,
+    fileChangeOutputs,
+    agentDiffs,
+    pendingApprovals,
+    subagentTools,
+    subagentCharacters,
+    layoutReady,
+    loadedAssets,
+    workspaceFolders,
+    runtimeMode,
+  } = useExtensionMessages(getOfficeState, editor.setLastSavedLayout, isEditDirty)
 
   const [isDebugMode, setIsDebugMode] = useState(false)
 
@@ -129,6 +163,19 @@ function App() {
 
   const handleSelectAgent = useCallback((id: number) => {
     vscode.postMessage({ type: 'focusAgent', id })
+  }, [])
+
+  const handleOpenCodex = useCallback((folderPath?: string) => {
+    vscode.postMessage({ type: 'openCodex', folderPath })
+  }, [])
+
+  const handleSendPrompt = useCallback((text: string) => {
+    if (selectedAgent === null) return
+    vscode.postMessage({ type: 'sendAgentPrompt', id: selectedAgent, text })
+  }, [selectedAgent])
+
+  const handleSubmitApproval = useCallback((requestId: string | number, decision: unknown) => {
+    vscode.postMessage({ type: 'submitApprovalDecision', requestId, decision })
   }, [])
 
   const containerRef = useRef<HTMLDivElement>(null)
@@ -226,10 +273,14 @@ function App() {
       <BottomToolbar
         isEditMode={editor.isEditMode}
         onOpenClaude={editor.handleOpenClaude}
+        onOpenCodex={handleOpenCodex}
         onToggleEditMode={editor.handleToggleEditMode}
         isDebugMode={isDebugMode}
         onToggleDebugMode={handleToggleDebugMode}
         workspaceFolders={workspaceFolders}
+        runtimeMode={runtimeMode}
+        selectedAgent={selectedAgent}
+        onSendPrompt={handleSendPrompt}
       />
 
       {editor.isEditMode && editor.isDirty && (
@@ -289,12 +340,78 @@ function App() {
         officeState={officeState}
         agents={agents}
         agentTools={agentTools}
+        agentMessages={agentMessages}
         subagentCharacters={subagentCharacters}
         containerRef={containerRef}
         zoom={editor.zoom}
         panRef={editor.panRef}
         onCloseAgent={handleCloseAgent}
       />
+
+      {selectedAgent !== null && pendingApprovals[selectedAgent] && pendingApprovals[selectedAgent].length > 0 && (
+        <div
+          style={{
+            position: 'absolute',
+            right: 10,
+            top: 10,
+            width: 420,
+            maxHeight: '40%',
+            overflow: 'auto',
+            zIndex: 90,
+            background: 'var(--pixel-bg)',
+            border: '2px solid var(--pixel-border)',
+            boxShadow: 'var(--pixel-shadow)',
+            padding: 8,
+          }}
+        >
+          <div style={{ fontSize: '22px', marginBottom: 6 }}>Pending approvals</div>
+          {pendingApprovals[selectedAgent].map((req) => {
+            const available = req.availableDecisions && req.availableDecisions.length > 0
+              ? req.availableDecisions
+              : defaultApprovalDecisions(req.method)
+            return (
+              <div key={String(req.requestId)} style={{ marginBottom: 10, border: '1px solid var(--pixel-border)', padding: 6 }}>
+                <div style={{ fontSize: '18px', marginBottom: 4 }}>{req.method}</div>
+                <pre style={{ fontSize: '14px', marginBottom: 6, color: 'var(--pixel-text-dim)', whiteSpace: 'pre-wrap' }}>{JSON.stringify(req.payload, null, 2)}</pre>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {available.map((decision, idx) => (
+                    <button
+                      key={`${String(req.requestId)}-${idx}`}
+                      style={{ fontSize: '18px', padding: '4px 8px' }}
+                      onClick={() => handleSubmitApproval(req.requestId, decision)}
+                    >
+                      {approvalDecisionLabel(decision)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {selectedAgent !== null && agentDiffs[selectedAgent] && (
+        <div
+          style={{
+            position: 'absolute',
+            right: 10,
+            bottom: isDebugMode ? '42%' : 60,
+            width: 460,
+            maxHeight: isDebugMode ? '35%' : '40%',
+            overflow: 'auto',
+            zIndex: 85,
+            background: 'var(--pixel-bg)',
+            border: '2px solid var(--pixel-border)',
+            boxShadow: 'var(--pixel-shadow)',
+            padding: 8,
+          }}
+        >
+          <div style={{ fontSize: '22px', marginBottom: 6 }}>Turn diff</div>
+          <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontSize: '16px', color: 'var(--pixel-text)' }}>
+            {agentDiffs[selectedAgent].diff || '(empty diff)'}
+          </pre>
+        </div>
+      )}
 
       {isDebugMode && (
         <DebugView
@@ -303,6 +420,8 @@ function App() {
           agentTools={agentTools}
           agentStatuses={agentStatuses}
           subagentTools={subagentTools}
+          commandOutputs={commandOutputs}
+          fileChangeOutputs={fileChangeOutputs}
           onSelectAgent={handleSelectAgent}
         />
       )}
