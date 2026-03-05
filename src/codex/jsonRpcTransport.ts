@@ -43,6 +43,7 @@ export class CodexJsonRpcTransport {
 	private stdoutBuffer = '';
 	private restarting = false;
 	private stopped = false;
+	private restartTimer: ReturnType<typeof setTimeout> | null = null;
 	private readonly emitter = new EventEmitter();
 
 	constructor(private readonly options: CodexJsonRpcTransportOptions) {}
@@ -60,6 +61,10 @@ export class CodexJsonRpcTransport {
 	}
 
 	start(): void {
+		if (this.restartTimer) {
+			clearTimeout(this.restartTimer);
+			this.restartTimer = null;
+		}
 		if (this.process) {
 			return;
 		}
@@ -95,8 +100,12 @@ export class CodexJsonRpcTransport {
 			this.emitter.emit('exit', code, signal);
 			if (this.options.autoRestart && !this.restarting && !this.stopped) {
 				this.restarting = true;
-				setTimeout(() => {
+				this.restartTimer = setTimeout(() => {
+					this.restartTimer = null;
 					this.restarting = false;
+					if (this.stopped || this.process) {
+						return;
+					}
 					this.start();
 				}, 1000);
 			}
@@ -105,6 +114,11 @@ export class CodexJsonRpcTransport {
 
 	stop(): void {
 		this.stopped = true;
+		if (this.restartTimer) {
+			clearTimeout(this.restartTimer);
+			this.restartTimer = null;
+		}
+		this.restarting = false;
 		if (!this.process) {
 			return;
 		}
