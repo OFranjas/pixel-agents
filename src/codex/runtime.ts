@@ -61,6 +61,18 @@ function sleep(ms: number): Promise<void> {
 	});
 }
 
+export function hasPendingApprovalForAgent(
+	pendingRequestToAgent: Map<JsonRpcId, number>,
+	agentId: number,
+): boolean {
+	for (const pendingAgentId of pendingRequestToAgent.values()) {
+		if (pendingAgentId === agentId) {
+			return true;
+		}
+	}
+	return false;
+}
+
 /**
  * Runtime provider backed by `codex app-server`.
  */
@@ -502,7 +514,9 @@ export class CodexAppServerRuntime implements RuntimeProvider {
 				id: agentId,
 				requestId: params.requestId,
 			});
-			this.options.onEvent({ type: 'agentToolPermissionClear', id: agentId });
+			if (!hasPendingApprovalForAgent(this.pendingRequestToAgent, agentId)) {
+				this.options.onEvent({ type: 'agentToolPermissionClear', id: agentId });
+			}
 		}
 	};
 

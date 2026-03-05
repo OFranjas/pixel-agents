@@ -264,6 +264,15 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
 			} catch (error) {
 				const detail = error instanceof Error ? error.message : String(error);
 				this.codexOutput.appendLine(`[codex] startup failed: ${detail}`);
+				if (this.codexRuntime) {
+					try {
+						await this.codexRuntime.dispose();
+					} catch (disposeError) {
+						const disposeDetail =
+							disposeError instanceof Error ? disposeError.message : String(disposeError);
+						this.codexOutput.appendLine(`[codex] failed to dispose startup runtime: ${disposeDetail}`);
+					}
+				}
 				this.codexRuntime = null;
 				if (this.runtimeMode === 'codex') {
 					vscode.window.showErrorMessage(`Pixel Agents: Codex startup failed. ${detail}`);
@@ -451,6 +460,24 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
 			agentMeta: meta,
 			folderNames,
 		});
+
+		for (const agent of codexAgents) {
+			const persisted = this.persistedAgentsV2.find((entry) => entry.id === agent.agentId);
+			if (
+				!persisted ||
+				persisted.runtime !== 'codex' ||
+				persisted.parentAgentId === undefined ||
+				!persisted.parentRuntimeRefId
+			) {
+				continue;
+			}
+			this.webview.postMessage({
+				type: 'subagentLinked',
+				id: agent.agentId,
+				parentAgentId: persisted.parentAgentId,
+				parentRuntimeRefId: persisted.parentRuntimeRefId,
+			});
+		}
 	}
 
 	private async syncPersistedAgentsV2FromClaude(): Promise<void> {

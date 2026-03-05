@@ -180,6 +180,7 @@ function App() {
     fileChangeOutputs,
     agentDiffs,
     pendingApprovals,
+    agentLineage,
     subagentTools,
     subagentCharacters,
     layoutReady,
@@ -240,6 +241,7 @@ function App() {
   const officeState = getOfficeState()
   const selectedMessage = selectedAgent !== null ? agentMessages[selectedAgent]?.text ?? '' : ''
   const isSelectedMessageExpanded = selectedAgent !== null ? !!expandedMessageByAgent[selectedAgent] : false
+  const selectedLineage = selectedAgent !== null ? agentLineage[selectedAgent] : undefined
 
   // Force dependency on editorTickForKeyboard to propagate keyboard-triggered re-renders
   void editorTickForKeyboard
@@ -381,6 +383,24 @@ function App() {
         panRef={editor.panRef}
         onCloseAgent={handleCloseAgent}
       />
+
+      {selectedAgent !== null && selectedLineage && (
+        <div
+          style={{
+            position: 'absolute',
+            left: 10,
+            top: 10,
+            zIndex: 88,
+            background: 'var(--pixel-bg)',
+            border: '2px solid var(--pixel-border)',
+            boxShadow: 'var(--pixel-shadow)',
+            padding: '4px 8px',
+            fontSize: '15px',
+          }}
+        >
+          Spawned by Agent #{selectedLineage.parentAgentId}
+        </div>
+      )}
 
       {selectedAgent !== null && pendingApprovals[selectedAgent] && pendingApprovals[selectedAgent].length > 0 && (
         <div

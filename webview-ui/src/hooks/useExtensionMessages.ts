@@ -50,6 +50,7 @@ export interface ExtensionMessageState {
   fileChangeOutputs: Record<number, Record<string, string>>
   agentDiffs: Record<number, { turnId: string; diff: string }>
   pendingApprovals: Record<number, Array<{ requestId: string | number; method: string; payload: Record<string, unknown>; availableDecisions?: unknown[] }>>
+  agentLineage: Record<number, { parentAgentId: number; parentRuntimeRefId: string }>
   subagentTools: Record<number, Record<string, ToolActivity[]>>
   subagentCharacters: SubagentCharacter[]
   layoutReady: boolean
@@ -81,6 +82,7 @@ export function useExtensionMessages(
   const [fileChangeOutputs, setFileChangeOutputs] = useState<Record<number, Record<string, string>>>({})
   const [agentDiffs, setAgentDiffs] = useState<Record<number, { turnId: string; diff: string }>>({})
   const [pendingApprovals, setPendingApprovals] = useState<Record<number, Array<{ requestId: string | number; method: string; payload: Record<string, unknown>; availableDecisions?: unknown[] }>>>({})
+  const [agentLineage, setAgentLineage] = useState<Record<number, { parentAgentId: number; parentRuntimeRefId: string }>>({})
   const [subagentTools, setSubagentTools] = useState<Record<number, Record<string, ToolActivity[]>>>({})
   const [subagentCharacters, setSubagentCharacters] = useState<SubagentCharacter[]>([])
   const [layoutReady, setLayoutReady] = useState(false)
@@ -172,6 +174,12 @@ export function useExtensionMessages(
           return next
         })
         setPendingApprovals((prev) => {
+          if (!(id in prev)) return prev
+          const next = { ...prev }
+          delete next[id]
+          return next
+        })
+        setAgentLineage((prev) => {
           if (!(id in prev)) return prev
           const next = { ...prev }
           delete next[id]
@@ -329,6 +337,13 @@ export function useExtensionMessages(
           }
           return { ...prev, [id]: nextList }
         })
+      } else if (msg.type === 'subagentLinked') {
+        const id = msg.id as number
+        const parentAgentId = msg.parentAgentId as number
+        const parentRuntimeRefId = msg.parentRuntimeRefId as string
+        if (typeof parentAgentId === 'number' && typeof parentRuntimeRefId === 'string') {
+          setAgentLineage((prev) => ({ ...prev, [id]: { parentAgentId, parentRuntimeRefId } }))
+        }
       } else if (msg.type === 'agentSelected') {
         const id = msg.id as number
         setSelectedAgent(id)
@@ -487,6 +502,7 @@ export function useExtensionMessages(
     fileChangeOutputs,
     agentDiffs,
     pendingApprovals,
+    agentLineage,
     subagentTools,
     subagentCharacters,
     layoutReady,
