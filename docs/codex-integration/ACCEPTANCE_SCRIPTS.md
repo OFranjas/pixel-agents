@@ -9,27 +9,22 @@ For M1-M8, scripts are planned gates and may depend on commands/tests introduced
 1. Run `npm run build`.
 2. Launch extension host (VS Code `F5`).
 3. Open the Pixel Agents panel.
-4. Set runtime mode using `pixelAgents.runtime` before each script.
+4. For milestones that include runtime routing (`M1+`), set `pixelAgents.runtime` before each script.
 
 ## M0
 
-- `M0-CLAUDE-01` (`claude`)
-  1. Set `pixelAgents.runtime=claude` and reload window.
+- `M0-BASELINE-01` (upstream compatibility baseline)
+  1. Launch panel in default runtime configuration.
   2. Click `+ Agent`.
-  3. Confirm a Claude agent is created and no Codex-only UI action is required.
-  Pass: baseline Claude flow still works after docs-only milestone artifacts.
+  3. Confirm baseline Claude workflow still works.
+  Pass: docs-only milestone introduces no behavioral regressions.
 
-- `M0-CODEX-01` (`codex`)
-  1. Set `pixelAgents.runtime=codex` and reload window.
-  2. Confirm toolbar labels `+ Agent (Codex)`.
-  3. Open integration docs directly from `docs/codex-integration/`.
-  Pass: runtime mode labeling + docs discoverability are correct.
-
-- `M0-MIXED-01` (`mixed`)
-  1. Set `pixelAgents.runtime=mixed` and reload window.
-  2. Confirm both `+ Agent` and `+ Codex` buttons appear.
-  3. Open integration docs directly from `docs/codex-integration/`.
-  Pass: mixed-mode affordances visible; docs linked.
+- `M0-DOCS-01` (planning artifacts)
+  1. Open `docs/codex-integration/ARCHITECTURE.md`.
+  2. Open `docs/codex-integration/MILESTONES.md`.
+  3. Open `docs/codex-integration/ACCEPTANCE_SCRIPTS.md`.
+  4. Open `docs/codex-integration/OWNERSHIP.md`.
+  Pass: planning docs required by M0 are present and readable in-repo.
 
 ## M1
 

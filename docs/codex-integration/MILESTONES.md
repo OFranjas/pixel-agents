@@ -4,7 +4,7 @@ All milestones below are planned unless explicitly delivered in merged PRs.
 
 | Milestone | Scope | Acceptance Gate |
 | --- | --- | --- |
-| M0 | Planning baseline: docs, rules, ownership, acceptance scripts. | `AGENTS.md` + `docs/codex-integration/*` + README docs links merged; no runtime code regressions introduced. |
+| M0 | Planning baseline: docs, rules, ownership, acceptance scripts. | `AGENTS.md` + `docs/codex-integration/*` merged; no runtime code regressions introduced. |
 | M1 | Transport/client test harness and routing test scaffolding. | Required tests for transport parsing and JSON-RPC message routing exist and run in CI/local workflow. |
 | M2 | Runtime bootstrap and mode routing hardening (`claude`/`codex`/`mixed`). | Agent creation and prompt routing are deterministic per mode; startup failures surface actionable errors. |
 | M3 | Persistence + restore parity across runtimes (`agents.v2`). | Restarting VS Code restores Claude and Codex agents correctly in supported modes without ID collisions. |
